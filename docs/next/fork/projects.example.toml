@@ -1,0 +1,50 @@
+[[group]]
+name = "Work"            # required, unique (case-insensitive); also the template binding key
+color = "blue"           # optional; one of: red orange yellow green teal blue purple pink gray
+
+[[group]]
+name = "Personal"
+color = "green"
+
+[[group]]
+name = "Infra"
+color = "gray"
+
+[[project]]
+name = "api"             # required, unique; selector and binding key
+label = "API"            # optional (default = name); applied at creation or with --reapply
+cwd = '~\src\api'        # required; must exist
+group = "Work"           # optional; must name a [[group]]
+color = "teal"           # optional per-workspace override
+
+  [[project.tab]]
+  label = "agent"        # required, unique within the project; also the tab binding key
+  agent = "claude"       # optional: start an agent of this kind through agent.start
+  args = []              # optional, only with agent
+  # agent_name = "api-agent"   # optional; default "<project>-<label>"
+
+  [[project.tab]]
+  label = "dev"
+  command = "npm run dev"     # optional; exclusive with agent; typed into the shell plus Enter
+  # cwd = '~\src\api\server'  # optional; default = project cwd
+
+[[project]]
+name = "web"
+cwd = '~\src\web'
+group = "Work"
+  [[project.tab]]
+  label = "agent"
+  agent = "claude"
+
+[[project]]
+name = "docs"
+cwd = '~\src\docs'
+group = "Personal"
+
+[[project]]
+name = "infra"
+cwd = '~\src\infra'
+group = "Infra"
+  [[project.tab]]
+  label = "agent"
+  agent = "claude"
