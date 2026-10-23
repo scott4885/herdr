@@ -925,6 +925,9 @@ impl ClientShellState {
             )
             .map(KeybindMatch::Action)
         });
+        if binding.is_none() && self.handle_organize_navigate_key(key, outcome) {
+            return;
+        }
         if let Some(binding) = binding {
             self.record_navigate_binding(binding, false, outcome);
         } else if is_ctrl_bracket_key(key) {

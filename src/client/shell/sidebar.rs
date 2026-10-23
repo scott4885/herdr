@@ -1,3 +1,7 @@
+use super::super::sidebar_tabs::{
+    card_heights, group_workspace_tabs, render_workspace_tabs, tab_rows_area, tabs_for,
+};
+use super::super::workspace_groups::{GroupLayout, GroupPaint, HeaderColumns};
 use super::*;
 use ratatui::{
     text::Line,
@@ -103,6 +107,7 @@ pub(crate) fn render_collapsed_sidebar(
         );
         hits.workspaces.push(WorkspaceHit {
             rect,
+            card_bottom: rect.bottom(),
             endpoint_id: ClientEndpointId::Local,
             workspace_id: workspace.workspace_id.clone(),
             indented: false,
@@ -227,6 +232,9 @@ pub(crate) fn render_sidebar(
     );
 
     let entries = workspace_entries(snapshot, state.collapsed_groups);
+    let workspace_tabs = group_workspace_tabs(snapshot);
+    let groups = GroupLayout::new(snapshot, &entries, state.collapsed_groups)
+        .with_ungrouped_drop_header(state.dragged_workspace_id.is_some());
     let body = Rect::new(
         workspace_area.x,
         workspace_area.y.saturating_add(WORKSPACE_HEADER_ROWS),
@@ -251,11 +259,13 @@ pub(crate) fn render_sidebar(
                     )
                     .len()
                     .max(1)
+                    .saturating_add(tabs_for(&workspace_tabs, &workspace.workspace_id).len())
                     .min(u16::MAX as usize) as u16
                 })
                 .unwrap_or(1)
         })
         .collect::<Vec<_>>();
+    let row_heights = groups.with_header_rows(&entries, row_heights);
     let gaps = entries
         .iter()
         .enumerate()
@@ -298,18 +308,30 @@ pub(crate) fn render_sidebar(
         .saturating_sub(metrics.offset_from_bottom);
     let show_scrollbar = metrics.max_offset_from_bottom > 0 && body.width > 1;
     let content_width = body.width.saturating_sub(u16::from(show_scrollbar));
-    let mut y = body.y;
+    let paint = GroupPaint::new(
+        snapshot,
+        config,
+        state.host_background_rgb,
+        &ClientEndpointId::Local,
+        false,
+    );
+    let columns = HeaderColumns::new(body, content_width, 0);
+    let mut y = groups.render_without_entries(buffer, columns, body.y, &paint, hits);
     for (entry_position, entry) in entries.iter().enumerate().skip(*state.workspace_scroll) {
         let Some(workspace) = snapshot.workspaces.get(entry.index) else {
             continue;
         };
         let status = displayed_workspace_status(snapshot, workspace, state.collapsed_groups);
         let rows = workspace_rows(workspace, status, entry.indented, &config.spaces);
-        let row_height = (rows.len().max(1).min(u16::MAX as usize) as u16).min(body.height);
-        if y.saturating_add(row_height) > body.bottom() {
+        let tabs = tabs_for(&workspace_tabs, &workspace.workspace_id);
+        let (workspace_height, row_height) = card_heights(rows.len(), tabs.len(), body.height);
+        if y.saturating_add(row_height.saturating_add(groups.rows_before(entry.index)))
+            > body.bottom()
+        {
             break;
         }
-        let rect = Rect::new(body.x, y, content_width, row_height);
+        y = groups.render_before(buffer, entry.index, columns, y, &paint, hits);
+        let rect = Rect::new(body.x, y, content_width, workspace_height);
         let selected = state.selected_workspace_id.is_some_and(|target| {
             target.matches(state.active_endpoint_id, &workspace.workspace_id)
         });
@@ -334,6 +356,18 @@ pub(crate) fn render_sidebar(
             dragged,
             palette,
         );
+        render_workspace_tabs(
+            buffer,
+            tab_rows_area(rect, row_height),
+            tabs,
+            entry,
+            &ClientEndpointId::Local,
+            true,
+            config,
+            hits,
+        );
+        let card = Rect::new(rect.x, rect.y, rect.width, row_height);
+        groups.decorate_card(buffer, entry, card, columns, &paint, hits);
         let group_toggle = render_parent_group_toggle(
             buffer,
             rect,
@@ -344,6 +378,7 @@ pub(crate) fn render_sidebar(
         );
         hits.workspaces.push(WorkspaceHit {
             rect,
+            card_bottom: y.saturating_add(row_height),
             endpoint_id: ClientEndpointId::Local,
             workspace_id: workspace.workspace_id.clone(),
             indented: entry.indented,
@@ -374,6 +409,7 @@ pub(crate) fn render_sidebar(
             Style::default().fg(palette.accent),
         );
     }
+    groups.render_drop_target_header(buffer, columns, state, &paint, hits);
 
     let footer_y = workspace_area.bottom().saturating_sub(1);
     if config.mouse_capture {
@@ -459,6 +495,11 @@ pub(crate) fn workspace_entries(
     snapshot: &ClientShellSnapshot,
     collapsed_groups: &HashSet<String>,
 ) -> Vec<WorkspaceEntry> {
+    if let Some(entries) =
+        super::super::workspace_groups::grouped_entries(snapshot, collapsed_groups)
+    {
+        return entries;
+    }
     let mut members = HashMap::<&str, Vec<usize>>::new();
     for (index, workspace) in snapshot.workspaces.iter().enumerate() {
         if let Some(worktree) = &workspace.worktree {

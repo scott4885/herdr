@@ -568,6 +568,11 @@ impl ClientShellState {
         }
         match pending.kind {
             PendingEndpointKind::Generic => {}
+            PendingEndpointKind::OrganizeUndo => {
+                if result.is_ok() {
+                    self.organize_undo = None;
+                }
+            }
             PendingEndpointKind::PaneLinkResolve { .. } => unreachable!("handled above"),
             PendingEndpointKind::ProductAnnouncementDismiss { version, id } => {
                 return match result {

@@ -513,10 +513,14 @@ impl ClientShellState {
             || point.1 < self.hits.workspace_body.y.saturating_sub(1)
             || point.1 >= self.hits.new_workspace.y
             || self.hits.workspaces.iter().any(|hit| {
-                hit.endpoint_id != self.active_endpoint_id && super::contains(hit.rect, point)
+                hit.endpoint_id != self.active_endpoint_id
+                    && super::contains(super::sidebar_tabs::card_rect(hit), point)
             })
         {
             return None;
+        }
+        if let Some(target) = super::workspace_groups::drop_target_at(self, point) {
+            return Some(target);
         }
         let snapshot = self.snapshot.as_deref()?;
         let mut slots = self
@@ -572,7 +576,7 @@ impl ClientShellState {
                     .get(entry.index)
                     .map(|workspace| workspace.workspace_id.clone())
             });
-            let row = last_hit.rect.bottom();
+            let row = last_hit.card_bottom;
             if row < self.hits.new_workspace.y {
                 slots.push((before, row));
             }
@@ -1215,7 +1219,14 @@ impl ClientShellState {
                     outcome.repaint = true;
                     return;
                 }
+                Some(ClientChromeDrag::WorkspaceGroup { .. }) => {
+                    self.update_workspace_group_drag(point, outcome);
+                    return;
+                }
                 None => {}
+            }
+            if self.drag_workspace_group_press(point, outcome) {
+                return;
             }
             if let Some(press) = self.workspace_press.as_ref() {
                 let delta = mouse
@@ -1297,8 +1308,14 @@ impl ClientShellState {
                         source_workspace_id,
                         target,
                     } => {
-                        if let Some((before_workspace_id, _)) = target {
-                            if let Some(method) = self.workspace_move_method(
+                        if let Some((before_workspace_id, row)) = target {
+                            if let Some(method) = super::workspace_groups::workspace_drop_method(
+                                self,
+                                &source_workspace_id,
+                                row,
+                            ) {
+                                self.send_organize_method(method, outcome);
+                            } else if let Some(method) = self.workspace_move_method(
                                 &source_workspace_id,
                                 before_workspace_id.as_deref(),
                             ) {
@@ -1360,6 +1377,11 @@ impl ClientShellState {
                     ClientChromeDrag::SidebarWidth | ClientChromeDrag::SidebarSection => {
                         self.persist_chrome_preferences(outcome);
                     }
+                    ClientChromeDrag::WorkspaceGroup {
+                        endpoint_id,
+                        group_id,
+                        target,
+                    } => self.drop_workspace_group(endpoint_id, group_id, target, outcome),
                     ClientChromeDrag::WorkspaceScrollbar { .. }
                     | ClientChromeDrag::AgentScrollbar { .. }
                     | ClientChromeDrag::HelpScrollbar { .. }
@@ -1367,6 +1389,9 @@ impl ClientShellState {
                     | ClientChromeDrag::ProductAnnouncementScrollbar { .. }
                     | ClientChromeDrag::ReleaseNotesScrollbar { .. } => {}
                 }
+                return;
+            }
+            if self.release_workspace_group_press(outcome) {
                 return;
             }
             if let Some(press) = self.workspace_press.take() {
@@ -1835,6 +1860,10 @@ impl ClientShellState {
                 if !self.config.mouse_capture {
                     return;
                 }
+                if self.open_workspace_group_menu_at(point) {
+                    outcome.repaint = true;
+                    return;
+                }
                 let workspace_id = (!self.sidebar_collapsed)
                     .then(|| self.active_endpoint_workspace_at(point))
                     .flatten();
@@ -1940,6 +1969,7 @@ impl ClientShellState {
                 self.workspace_press = None;
                 self.tab_press = None;
                 self.chrome_drag = None;
+                self.workspace_group_press = None;
                 // The toggle is painted over the agent scrollbar's last cell.
                 if super::contains(self.hits.sidebar_toggle, point) {
                     self.sidebar_collapsed = !self.sidebar_collapsed;
@@ -2088,6 +2118,9 @@ impl ClientShellState {
                     outcome.repaint = true;
                     return;
                 }
+                if self.press_workspace_group_header(point) {
+                    return;
+                }
                 let group_toggle = self.hits.workspaces.iter().find_map(|hit| {
                     let (rect, key) = hit.group_toggle.as_ref()?;
                     super::contains(*rect, point).then(|| (hit.endpoint_id.clone(), key.clone()))
@@ -2096,6 +2129,9 @@ impl ClientShellState {
                     self.toggle_collapsed_group(&endpoint_id, key);
                     outcome.repaint = true;
                     self.persist_chrome_preferences(outcome);
+                    return;
+                }
+                if self.focus_sidebar_tab_at(point, outcome) {
                     return;
                 }
                 let workspace_press = self

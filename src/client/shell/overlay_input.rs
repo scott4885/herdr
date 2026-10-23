@@ -987,6 +987,10 @@ impl ClientShellState {
                     label: Some(trimmed.to_owned()),
                 },
             )),
+            ClientRenameTarget::Organize(prompt) => {
+                self.save_organize_prompt(prompt, trimmed, outcome);
+                None
+            }
         };
         if let Some(method) = method {
             self.push_endpoint_method(method, outcome);

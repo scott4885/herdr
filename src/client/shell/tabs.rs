@@ -101,9 +101,8 @@ pub(crate) fn render_tab_bar(
         }
         let rect = Rect::new(x, area.y, width, 1);
         let style = if tab.focused {
-            let base = Style::default()
-                .fg(panel_contrast_fg(palette))
-                .bg(palette.accent);
+            let (fg, bg) = super::super::workspace_groups::active_tab_colors(snapshot, palette);
+            let base = Style::default().fg(fg).bg(bg);
             if tab.custom_label {
                 base.add_modifier(Modifier::BOLD)
             } else {

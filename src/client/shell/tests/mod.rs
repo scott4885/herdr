@@ -263,3 +263,4 @@ mod mobile;
 mod mouse_selection;
 mod popup_focus_projection;
 mod startup_overlays;
+mod workspace_groups;

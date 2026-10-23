@@ -89,7 +89,10 @@ pub(super) struct ShellHitMap {
     pub(super) workspace_scrollbar: Rect,
     pub(super) workspace_scroll_metrics: Option<crate::pane::ScrollMetrics>,
     pub(super) workspace_max_scroll: usize,
+    pub(super) workspace_groups: Vec<super::workspace_groups::WorkspaceGroupHit>,
+    pub(super) workspace_drop_slots: Vec<super::workspace_groups::WorkspaceDropSlot>,
     pub(super) tabs: Vec<(Rect, String)>,
+    pub(super) sidebar_tabs: Vec<(Rect, ClientEndpointId, String)>,
     pub(super) panes: Vec<PaneHit>,
     pub(super) popup: Option<PaneHit>,
     pub(super) pane_splits: Vec<PaneSplitHit>,
@@ -216,6 +219,11 @@ pub(super) enum ClientChromeDrag {
         source_workspace_id: String,
         target: Option<(Option<String>, u16)>,
     },
+    WorkspaceGroup {
+        endpoint_id: ClientEndpointId,
+        group_id: String,
+        target: Option<(Option<String>, u16)>,
+    },
     PaneSplit {
         hit: PaneSplitHit,
         tab_id: String,
@@ -233,6 +241,7 @@ pub(super) enum ClientChromeDrag {
 
 pub(super) struct WorkspaceHit {
     pub(super) rect: Rect,
+    pub(super) card_bottom: u16,
     pub(super) endpoint_id: ClientEndpointId,
     pub(super) workspace_id: String,
     pub(super) indented: bool,
@@ -315,6 +324,7 @@ pub(super) enum ClientRenameTarget {
     Pane {
         pane_id: String,
     },
+    Organize(super::workspace_groups::OrganizePrompt),
 }
 
 #[derive(Debug)]
@@ -525,6 +535,7 @@ pub(super) enum ClientContextMenuAction {
     Zoom,
     ToggleRightClickPassthrough,
     ClosePane,
+    Organize(super::workspace_groups::OrganizeAction),
 }
 
 #[derive(Debug)]
@@ -548,6 +559,7 @@ pub(super) enum ClientContextMenuTarget {
         has_manual_label: bool,
         right_click_passthrough: bool,
     },
+    Organize(super::workspace_groups::OrganizeMenu),
 }
 
 #[derive(Debug)]
@@ -674,6 +686,7 @@ pub(super) enum PendingEndpointKind {
         generation: u64,
         session_generation: u64,
     },
+    OrganizeUndo,
 }
 
 pub(super) struct PendingEndpointRequest {
@@ -879,6 +892,8 @@ pub(crate) struct ClientShellState {
     pub(super) last_sidebar_divider_click: Option<std::time::Instant>,
     pub(super) chrome_drag: Option<ClientChromeDrag>,
     pub(super) workspace_press: Option<ClientWorkspacePress>,
+    pub(super) workspace_group_press: Option<super::workspace_groups::WorkspaceGroupPress>,
+    pub(super) organize_undo: Option<super::workspace_groups::OrganizeUndo>,
     pub(super) tab_press: Option<ClientTabPress>,
     pub(super) collapsed_groups: HashSet<String>,
     pub(super) remote_collapsed_groups: HashMap<ClientEndpointId, HashSet<String>>,
@@ -1053,6 +1068,8 @@ impl ClientShellState {
             last_sidebar_divider_click: None,
             chrome_drag: None,
             workspace_press: None,
+            workspace_group_press: None,
+            organize_undo: None,
             tab_press: None,
             collapsed_groups: preferences.collapsed_groups.into_iter().collect(),
             remote_collapsed_groups,

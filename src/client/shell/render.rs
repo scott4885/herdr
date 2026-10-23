@@ -248,6 +248,7 @@ pub(super) struct ShellRenderState<'a> {
     pub(super) reveal_navigation_workspace: &'a mut bool,
     pub(super) dragged_workspace_id: Option<&'a str>,
     pub(super) workspace_drop_indicator_row: Option<u16>,
+    pub(super) host_background_rgb: [u8; 3],
 }
 
 pub(super) fn render_shell(
@@ -330,6 +331,9 @@ pub(super) fn render_shell(
         hits.new_workspace = Rect::default();
         hits.machines.clear();
         hits.workspaces.clear();
+        hits.sidebar_tabs.clear();
+        hits.workspace_groups.clear();
+        hits.workspace_drop_slots.clear();
         hits.agents.clear();
         hits.endpoint_agents.clear();
         hits.tab_scroll_left = Rect::default();

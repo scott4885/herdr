@@ -1,4 +1,6 @@
 use super::render::{display_width, put_right_text, put_text, ShellRenderState};
+use super::sidebar_tabs::{card_heights, render_workspace_tabs, tab_rows_area, tabs_for};
+use super::workspace_groups::{EndpointGroups, HeaderColumns};
 use super::*;
 
 fn collapsed_groups_for_endpoint<'a>(
@@ -188,6 +190,7 @@ pub(super) fn render_collapsed(
             );
             hits.workspaces.push(WorkspaceHit {
                 rect,
+                card_bottom: rect.bottom(),
                 endpoint_id: endpoint.endpoint_id.clone(),
                 workspace_id: workspace.workspace_id.clone(),
                 indented: false,
@@ -265,6 +268,7 @@ pub(super) fn render_expanded(
     );
 
     let empty_collapsed_groups = HashSet::new();
+    let group_layouts = EndpointGroups::new(state, state.endpoints, config);
 
     enum Row {
         Endpoint(usize),
@@ -274,6 +278,7 @@ pub(super) fn render_expanded(
         },
     }
     let mut rows = Vec::new();
+    let workspace_tabs = super::sidebar_tabs::group_endpoint_workspace_tabs(state.endpoints);
     for (endpoint_index, endpoint) in state.endpoints.iter().enumerate() {
         rows.push(Row::Endpoint(endpoint_index));
         if state.collapsed_endpoints.contains(&endpoint.endpoint_id) {
@@ -304,8 +309,10 @@ pub(super) fn render_expanded(
     let row_heights = rows
         .iter()
         .map(|row| match row {
-            Row::Endpoint(_) => 1,
+            Row::Endpoint(index) => group_layouts.rows_without_entries(*index).saturating_add(1),
             Row::Workspace { endpoint, entry } => {
+                let tab_groups = &workspace_tabs[*endpoint];
+                let header_rows = group_layouts.rows_around(*endpoint, entry.index);
                 let endpoint = &state.endpoints[*endpoint];
                 let collapsed_groups = collapsed_groups_for_endpoint(state, &endpoint.endpoint_id)
                     .unwrap_or(&empty_collapsed_groups);
@@ -327,10 +334,12 @@ pub(super) fn render_expanded(
                             )
                             .len()
                             .max(1)
+                            .saturating_add(tabs_for(tab_groups, &workspace.workspace_id).len())
                             .min(u16::MAX as usize) as u16,
                         )
                     })
                     .unwrap_or(1)
+                    .saturating_add(header_rows)
             }
         })
         .collect::<Vec<_>>();
@@ -397,6 +406,7 @@ pub(super) fn render_expanded(
         .saturating_sub(metrics.offset_from_bottom);
     let show_scrollbar = metrics.max_offset_from_bottom > 0 && body.width > 1;
     let content_width = body.width.saturating_sub(u16::from(show_scrollbar));
+    let columns = HeaderColumns::new(body, content_width, 2);
     let mut y = body.y;
     for (row_index, row) in rows.iter().enumerate().skip(*state.workspace_scroll) {
         match row {
@@ -431,8 +441,11 @@ pub(super) fn render_expanded(
                 y = y
                     .saturating_add(1)
                     .saturating_add(gaps.get(row_index).copied().unwrap_or(0));
+                y = group_layouts.render_without_entries(buffer, *index, columns, y, hits);
             }
             Row::Workspace { endpoint, entry } => {
+                let tab_groups = &workspace_tabs[*endpoint];
+                let section = *endpoint;
                 let endpoint = &state.endpoints[*endpoint];
                 let Some(snapshot) = endpoint.snapshot.as_deref() else {
                     continue;
@@ -453,11 +466,15 @@ pub(super) fn render_expanded(
                     entry.indented,
                     &config.spaces,
                 );
-                let height = (tokens.len().max(1).min(u16::MAX as usize) as u16).min(body.height);
-                if y.saturating_add(height) > body.bottom() {
+                let tabs = tabs_for(tab_groups, &workspace.workspace_id);
+                let (workspace_height, height) =
+                    card_heights(tokens.len(), tabs.len(), body.height);
+                let header_rows = group_layouts.rows_before(section, entry.index);
+                if y.saturating_add(height.saturating_add(header_rows)) > body.bottom() {
                     break;
                 }
-                let rect = Rect::new(body.x, y, content_width, height);
+                y = group_layouts.render_before(buffer, section, entry.index, columns, y, hits);
+                let rect = Rect::new(body.x, y, content_width, workspace_height);
                 let nested = Rect::new(
                     rect.x.saturating_add(2),
                     rect.y,
@@ -481,9 +498,21 @@ pub(super) fn render_expanded(
                     false,
                     palette,
                 );
+                render_workspace_tabs(
+                    buffer,
+                    tab_rows_area(nested, height),
+                    tabs,
+                    entry,
+                    &endpoint.endpoint_id,
+                    endpoint_active,
+                    config,
+                    hits,
+                );
+                let card = Rect::new(rect.x, rect.y, rect.width, height);
+                group_layouts.decorate_card(buffer, section, entry, card, columns, hits);
                 if endpoint.status != ClientEndpointStatus::Online {
                     buffer.set_style(
-                        rect,
+                        card,
                         Style::default()
                             .fg(palette.overlay0)
                             .add_modifier(Modifier::DIM),
@@ -499,6 +528,7 @@ pub(super) fn render_expanded(
                 );
                 hits.workspaces.push(WorkspaceHit {
                     rect,
+                    card_bottom: y.saturating_add(height),
                     endpoint_id: endpoint.endpoint_id.clone(),
                     workspace_id: workspace.workspace_id.clone(),
                     indented: entry.indented,
@@ -506,7 +536,8 @@ pub(super) fn render_expanded(
                 });
                 y = y
                     .saturating_add(height)
-                    .saturating_add(gaps.get(row_index).copied().unwrap_or(0));
+                    .saturating_add(gaps.get(row_index).copied().unwrap_or(0))
+                    .saturating_add(group_layouts.rows_after(section, entry.index));
             }
         }
     }

@@ -5,7 +5,8 @@ impl ClientContextMenuOverlay {
         use ClientContextMenuAction as Action;
 
         let item = |label, action| ClientContextMenuItem { label, action };
-        match &self.target {
+        let mut items = match &self.target {
+            ClientContextMenuTarget::Organize(menu) => return menu.items(),
             ClientContextMenuTarget::Workspace { is_git: false, .. } => {
                 vec![item("Rename", Action::Rename), item("Close", Action::Close)]
             }
@@ -79,7 +80,11 @@ impl ClientContextMenuOverlay {
                 ]);
                 items
             }
+        };
+        if matches!(self.target, ClientContextMenuTarget::Workspace { .. }) {
+            items.push(super::workspace_groups::organize_menu_item());
         }
+        items
     }
 }
 
@@ -191,6 +196,10 @@ impl ClientShellState {
             outcome.repaint = true;
             return;
         };
+        if let ClientContextMenuAction::Organize(action) = action {
+            self.activate_organize_menu_item(menu, action, outcome);
+            return;
+        }
         match menu.target {
             ClientContextMenuTarget::Workspace {
                 workspace_id,
@@ -215,6 +224,7 @@ impl ClientShellState {
                 action,
                 outcome,
             ),
+            ClientContextMenuTarget::Organize(_) => {}
         }
         outcome.repaint = true;
     }
