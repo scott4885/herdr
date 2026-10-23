@@ -28,6 +28,7 @@ mod terminal_targets;
 mod terminal_titles;
 mod theme_sync;
 mod window_title;
+pub(crate) mod workspace_groups;
 mod worktrees;
 
 use std::collections::HashMap;
@@ -575,6 +576,7 @@ impl App {
             host_cell_size: crate::kitty_graphics::HostCellSize::default(),
             session_dirty: false,
             terminal_runtime_shutdowns: Vec::new(),
+            workspace_groups: Default::default(),
         };
 
         state.terminals = restored_terminals;
@@ -683,6 +685,7 @@ impl App {
         app.configure_tab_bar_status(&config.ui.tab_bar_right, &config.ui.tab_bar_right_separator);
         app.configure_window_title(&config.ui.window_title);
         app.refresh_restored_workspace_git_metadata();
+        app.load_workspace_groups();
         Ok(app)
     }
 

@@ -12,6 +12,7 @@ pub mod response;
 pub mod server;
 pub mod session;
 pub mod tabs;
+pub mod workspace_groups;
 pub mod workspaces;
 pub mod worktrees;
 
@@ -26,6 +27,7 @@ pub use response::*;
 pub use server::*;
 pub use session::*;
 pub use tabs::*;
+pub use workspace_groups::*;
 pub use workspaces::*;
 pub use worktrees::*;
 
@@ -67,6 +69,8 @@ operations::define_operations! {
     WorkspaceMoveBlock(WorkspaceMoveBlockParams) => "workspace.move_block", true, true;
     WorkspaceReportMetadata(WorkspaceReportMetadataParams) => "workspace.report_metadata", true, false;
     WorkspaceClose(WorkspaceCloseParams) => "workspace.close", true, true;
+    WorkspaceGroupList(EmptyParams) => "workspace_group.list", false, false;
+    WorkspaceGroupEdit(WorkspaceGroupEditParams) => "workspace_group.edit", true, true;
     WorktreeList(WorktreeListParams) => "worktree.list", false, true;
     WorktreeCreate(WorktreeCreateParams) => "worktree.create", true, true;
     WorktreeOpen(WorktreeOpenParams) => "worktree.open", true, true;

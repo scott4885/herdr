@@ -4414,6 +4414,235 @@
           },
           "type": "object"
         },
+        "WorkspaceGroupEditParams": {
+          "properties": {
+            "ops": {
+              "items": {
+                "$ref": "#/schemas/request/$defs/WorkspaceGroupOp"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "ops"
+          ],
+          "type": "object"
+        },
+        "WorkspaceGroupOp": {
+          "oneOf": [
+            {
+              "properties": {
+                "before_group_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "color": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                },
+                "op": {
+                  "const": "create",
+                  "type": "string"
+                },
+                "template": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "workspace_ids": {
+                  "default": [],
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "op",
+                "name"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "color": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "group_id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "op": {
+                  "const": "update",
+                  "type": "string"
+                },
+                "template": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "op",
+                "group_id"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "group_id": {
+                  "type": "string"
+                },
+                "op": {
+                  "const": "delete",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "op",
+                "group_id"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "before_group_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "group_id": {
+                  "type": "string"
+                },
+                "op": {
+                  "const": "move",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "op",
+                "group_id"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "before_workspace_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "group_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "op": {
+                  "const": "place",
+                  "type": "string"
+                },
+                "workspace_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "op",
+                "workspace_id"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "color": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "op": {
+                  "const": "set_color",
+                  "type": "string"
+                },
+                "workspace_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "op",
+                "workspace_id"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "op": {
+                  "const": "bind",
+                  "type": "string"
+                },
+                "project": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "workspace_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "op",
+                "workspace_id"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "op": {
+                  "const": "bind_tab",
+                  "type": "string"
+                },
+                "tab_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "workspace_id": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "op",
+                "workspace_id",
+                "key"
+              ],
+              "type": "object"
+            }
+          ]
+        },
         "WorkspaceMoveBlockParams": {
           "properties": {
             "before_workspace_id": {
@@ -5057,6 +5286,38 @@
             },
             "params": {
               "$ref": "#/schemas/request/$defs/WorkspaceCloseParams"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "workspace_group.list",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/schemas/request/$defs/EmptyParams"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "method": {
+              "const": "workspace_group.edit",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/schemas/request/$defs/WorkspaceGroupEditParams"
             }
           },
           "required": [
@@ -9234,6 +9495,39 @@
             },
             {
               "properties": {
+                "deleted_templates": {
+                  "default": [],
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "groups": {
+                  "items": {
+                    "$ref": "#/schemas/success_response/$defs/WorkspaceGroupInfo"
+                  },
+                  "type": "array"
+                },
+                "type": {
+                  "const": "workspace_groups",
+                  "type": "string"
+                },
+                "workspaces": {
+                  "items": {
+                    "$ref": "#/schemas/success_response/$defs/WorkspaceGroupMemberInfo"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "type",
+                "groups",
+                "workspaces"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
                 "root_pane": {
                   "$ref": "#/schemas/success_response/$defs/PaneInfo"
                 },
@@ -10570,6 +10864,90 @@
             "focused",
             "pane_count",
             "agent_status"
+          ],
+          "type": "object"
+        },
+        "WorkspaceGroupInfo": {
+          "properties": {
+            "color": {
+              "type": "string"
+            },
+            "group_id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "template": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "group_id",
+            "name",
+            "color"
+          ],
+          "type": "object"
+        },
+        "WorkspaceGroupMemberInfo": {
+          "properties": {
+            "color": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "cwd": {
+              "type": "string"
+            },
+            "group_id": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "linked": {
+              "default": false,
+              "type": "boolean"
+            },
+            "project": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "tabs": {
+              "default": [],
+              "items": {
+                "$ref": "#/schemas/success_response/$defs/WorkspaceGroupTabBinding"
+              },
+              "type": "array"
+            },
+            "workspace_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "workspace_id",
+            "cwd"
+          ],
+          "type": "object"
+        },
+        "WorkspaceGroupTabBinding": {
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "tab_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "key",
+            "tab_id"
           ],
           "type": "object"
         },

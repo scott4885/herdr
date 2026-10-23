@@ -888,6 +888,7 @@ pub struct AppState {
     /// Terminal runtimes that should be shut down by the app/runtime layer
     /// after state has detached their terminal metadata.
     pub(crate) terminal_runtime_shutdowns: Vec<crate::terminal::TerminalId>,
+    pub(crate) workspace_groups: crate::app::workspace_groups::WorkspaceGroups,
 }
 
 impl AppState {
@@ -1120,6 +1121,7 @@ impl AppState {
             host_cell_size: crate::kitty_graphics::HostCellSize::default(),
             session_dirty: false,
             terminal_runtime_shutdowns: Vec::new(),
+            workspace_groups: Default::default(),
         }
     }
 

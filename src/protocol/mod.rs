@@ -6,5 +6,7 @@ pub(crate) mod surface_delta;
 pub(crate) mod surface_reuse;
 pub(crate) mod surface_scroll;
 mod wire;
+mod workspace_groups;
 
 pub use wire::*;
+pub use workspace_groups::*;

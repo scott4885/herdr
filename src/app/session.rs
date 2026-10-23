@@ -19,6 +19,7 @@ impl App {
     }
 
     pub(crate) fn sync_session_save_schedule(&mut self) {
+        self.reconcile_workspace_groups();
         if self.state.session_dirty {
             self.state.session_dirty = false;
             self.schedule_session_save();

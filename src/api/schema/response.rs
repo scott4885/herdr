@@ -18,6 +18,7 @@ use super::plugins::{
 use super::server::ServerCapabilities;
 use super::session::SessionSnapshot;
 use super::tabs::TabInfo;
+use super::workspace_groups::{WorkspaceGroupInfo, WorkspaceGroupMemberInfo};
 use super::workspaces::WorkspaceInfo;
 use super::worktrees::{WorktreeInfo, WorktreeSourceInfo};
 
@@ -53,6 +54,12 @@ pub enum ResponseResult {
     },
     WorkspaceInfo {
         workspace: WorkspaceInfo,
+    },
+    WorkspaceGroups {
+        groups: Vec<WorkspaceGroupInfo>,
+        workspaces: Vec<WorkspaceGroupMemberInfo>,
+        #[serde(default)]
+        deleted_templates: Vec<String>,
     },
     WorkspaceCreated {
         workspace: WorkspaceInfo,
