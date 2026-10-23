@@ -178,6 +178,10 @@ fn run_channel_command(args: &[String]) -> std::io::Result<i32> {
 }
 
 fn channel_set(args: &[String]) -> std::io::Result<i32> {
+    if crate::update::FORK_BLOCKS_SELF_UPDATE {
+        eprintln!("update channels do not apply to this fork build.");
+        return Ok(1);
+    }
     let Some(channel) = parse_channel_set_arg(args) else {
         eprintln!("usage: herdr channel set <stable|preview>");
         return Ok(2);
@@ -1142,3 +1146,6 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod fork_tests;

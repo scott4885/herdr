@@ -2105,8 +2105,19 @@ fn homebrew_cellar_keg_root(path: &Path) -> Option<PathBuf> {
 // Public API
 // ---------------------------------------------------------------------------
 
+/// Fork builds refuse `herdr update` and `herdr channel set`: an upstream
+/// self-update would silently replace the fork binary.
+pub(crate) const FORK_BLOCKS_SELF_UPDATE: bool = true;
+
 /// Manual self-update command (`herdr update`).
 pub fn self_update(options: SelfUpdateOptions) -> Result<Version, String> {
+    if FORK_BLOCKS_SELF_UPDATE {
+        return Err(
+            "self-update is disabled for this fork build; rebuild from the fork source, \
+             or reinstall upstream Herdr deliberately with its installer"
+                .into(),
+        );
+    }
     let channel = UpdateChannel::configured();
 
     if is_homebrew_managed_install() {
@@ -4019,3 +4030,6 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod fork_tests;
